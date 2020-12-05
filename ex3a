@@ -13,7 +13,9 @@ void quick_sort (int arr[],int low,int high);
 void swap(int* a, int* b);
 int partition (int arr[], int low, int high);
 void terminate();
-void rs_search(int random_arr[ARR_LEN],int pipe_rs_to_dad[],int pipe_dad_to_rs[]);
+void rs_son(int random_arr[ARR_LEN],int pipe_rs_to_dad[],int pipe_dad_to_rs[]);
+void bs_son(int random_arr[ARR_LEN],int pipe_bs_to_dad[],int pipe_dad_to_bs[]);
+int binary_search(int arr[], int low, int high, int wanted_value);
 //-------------------------------------------------------------------------
 
 int main()
@@ -31,10 +33,15 @@ int main()
     int pipe_dad_to_rs[2]; //create a pipe for dad tors_son
      if(pipe(pipe_dad_to_rs)==-1)
          terminate();
-     int pipe_rs_to_dad[2]; //create a pipe for rs_son to dad
+    int pipe_rs_to_dad[2]; //create a pipe for rs_son to dad
           if(pipe(pipe_rs_to_dad)==-1)
               terminate();
-     // ssize_t ret;
+    int pipe_dad_to_bs[2]; //create a pipe for dad tors_son
+         if(pipe(pipe_dad_to_bs)==-1)
+            terminate();
+     int pipe_bs_to_dad[2]; //create a pipe for rs_son to dad
+         if(pipe(pipe_bs_to_dad)==-1)
+            terminate();
 
      pid_t status;
      status=fork();
@@ -73,7 +80,7 @@ int main()
 	 }
 
      if(status==0) {
-    	 rs_search(random_arr,pipe_rs_to_dad,pipe_dad_to_rs);
+    	 rs_son(random_arr,pipe_rs_to_dad,pipe_dad_to_rs);
      }
 	return EXIT_SUCCESS;
 }
@@ -84,7 +91,57 @@ void terminate(){
     exit(EXIT_FAILURE);
 }
 //-------------------------------------------------------------------------
-void rs_search(int random_arr[ARR_LEN],int pipe_rs_to_dad[],int pipe_dad_to_rs[]){
+void bs_son(int random_arr[ARR_LEN],int pipe_bs_to_dad[],int pipe_dad_to_bs[]){
+	int nbytes_son,i,num_from_pipe;
+		time_t time_before,time_after,time_son;
+
+		close(pipe_bs_to_dad[0]);
+	    close(pipe_dad_to_bs[1]); //son read,close write
+
+	    nbytes_son=read(pipe_dad_to_bs[0],&num_from_pipe,sizeof(int));
+
+		     while(num_from_pipe!=-1){
+		    	 time_before=time(NULL);
+
+		    	 binary_search(random_arr,0,ARR_LEN-1,num_from_pipe);
+
+		    	 time_after=time(NULL);
+		    	 time_son=time_after-time_before;
+		    	 write(pipe_bs_to_dad[1],&time_son,sizeof(int));
+		    	 nbytes_son=read(pipe_dad_to_bs[0],&num_from_pipe,sizeof(int));
+		     }
+
+		close(pipe_dad_to_bs[0]);
+		close(pipe_bs_to_dad[1]);
+
+		 exit( EXIT_SUCCESS);
+}
+//-------------------------------------------------------------------------
+int binary_search(int arr[], int low, int high, int wanted_value){
+	if (high >= low) {
+	        int mid = low + (high - low) / 2;
+
+	        // If the element is present at the middle
+	        // itself
+	        if (arr[mid] == wanted_value)
+	            return mid;
+
+	        // If element is smaller than mid, then
+	        // it can only be present in left subarray
+	        if (arr[mid] > wanted_value)
+	            return binary_search(arr, low, mid - 1, wanted_value);
+
+	        // Else the element can only be present
+	        // in right subarray
+	        return binary_search(arr, mid + 1, high, wanted_value);
+	    }
+
+	    // We reach here when element is not
+	    // present in array
+	    return -1;
+}
+//-------------------------------------------------------------------------
+void rs_son(int random_arr[ARR_LEN],int pipe_rs_to_dad[],int pipe_dad_to_rs[]){
 	int nbytes_son,i,num_from_pipe;
 	time_t time_before,time_after,time_son;
 
