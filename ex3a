@@ -19,7 +19,6 @@ int binary_search(int arr[], int low, int high, int wanted_value);
 void dad_with_rs(int pipe_dad_to_rs[],int pipe_rs_to_dad[],int random_arr[],int*rs_avg,int* rs_max,int* rs_min);
 void dad_with_bs(int pipe_dad_to_bs[],int pipe_bs_to_dad[],int random_arr[],int*bs_avg,int* bs_max,int* bs_min);
 //-------------------------------------------------------------------------
-
 int main()
 {
 	srand(17);
@@ -54,8 +53,9 @@ int main()
      terminate();
 
      if(status>0) {
+    	 if(i==0)
     	 dad_with_rs(pipe_dad_to_rs,pipe_rs_to_dad,random_arr,&rs_avg,&rs_max,&rs_min);
-
+    	 else
     	 dad_with_bs(pipe_dad_to_bs,pipe_bs_to_dad,random_arr,&bs_avg,&bs_max,&bs_min);
 
 	 }
@@ -85,7 +85,7 @@ void terminate(){
 }
 //-------------------------------------------------------------------------
 void bs_son(int random_arr[ARR_LEN],int pipe_bs_to_dad[],int pipe_dad_to_bs[]){
-	int nbytes_son,i,num_from_pipe;
+	int nbytes_son,num_from_pipe;
 		time_t time_before,time_after,time_son;
 
 		close(pipe_bs_to_dad[0]);
@@ -213,7 +213,7 @@ void quick_sort(int arr[], int low, int high)
 }
 //-------------------------------------------------------------------------
 void dad_with_rs(int pipe_dad_to_rs[],int pipe_rs_to_dad[],
-		int random_arr[],int*rs_avg,int* rs_max,int* rs_min){
+		int random_arr[],int* rs_avg,int* rs_max,int* rs_min){
 	int nbytes_dad,i,rand_num,read_num,rs_sum=0;
 
 	close(pipe_rs_to_dad[1]);
@@ -223,24 +223,25 @@ void dad_with_rs(int pipe_dad_to_rs[],int pipe_rs_to_dad[],
 	    	 write(pipe_dad_to_rs[1],&rand_num,sizeof(int));
 	    	 nbytes_dad=read(pipe_rs_to_dad[0],&read_num,sizeof(int));
 	    	 rs_sum+=read_num;
-	    	 rs_min=read_num;
-	    	 rs_max=read_num; //set initial values to min & max
+	    	 *rs_min=read_num;
+	    	 *rs_max=read_num; //set initial values to min & max
+
 	    	 //raffle numbers & sent to sons via pipes:
 	    	 for(i=0;i<999;i++){
 	    	 rand_num=rand()%RAND_RANGE;
 	    	 write(pipe_dad_to_rs[1],&rand_num,sizeof(int));
 	    	 nbytes_dad=read(pipe_rs_to_dad[0],&read_num,sizeof(int));
 	    	 rs_sum+=read_num;
-	    	 if(read_num>rs_max)
-	    		 rs_max=read_num;
-	    	 else if(read_num<rs_min)
-	    		 rs_min=read_num;
+	    	 if(read_num>*rs_max)
+	    		 *rs_max=read_num;
+	    	 else if(read_num<*rs_min)
+	    		 *rs_min=read_num;
 	    	 }
 	    	 //make son finish:
 	    	 rand_num=-1;
 	    	 write(pipe_dad_to_rs[1],&rand_num,sizeof(int));
 	    	 //print details & close pipes"
-	    	 rs_avg=rs_sum/1000;
+	    	 *rs_avg=rs_sum/1000;
 }
 //-------------------------------------------------------------------------
 void dad_with_bs(int pipe_dad_to_bs[],int pipe_bs_to_dad[],int random_arr[],
@@ -254,22 +255,23 @@ void dad_with_bs(int pipe_dad_to_bs[],int pipe_bs_to_dad[],int random_arr[],
 		    	 write(pipe_dad_to_bs[1],&rand_num,sizeof(int));
 		    	 nbytes_dad=read(pipe_bs_to_dad[0],&read_num,sizeof(int));
 		    	 bs_sum+=read_num;
-		    	 bs_min=read_num;
-		    	 bs_max=read_num; //set initial values to min & max
+		    	 *bs_min=read_num;
+		    	 *bs_max=read_num; //set initial values to min & max
+
 		    	 //raffle numbers & sent to sons via pipes:
 		    	 for(i=0;i<999;i++){
 		    	 rand_num=rand()%RAND_RANGE;
 		    	 write(pipe_dad_to_bs[1],&rand_num,sizeof(int));
 		    	 nbytes_dad=read(pipe_bs_to_dad[0],&read_num,sizeof(int));
 		    	 bs_sum+=read_num;
-		    	 if(read_num>bs_max)
-		    		 bs_max=read_num;
-		    	 else if(read_num<bs_min)
-		    		 bs_min=read_num;
+		    	 if(read_num>*bs_max)
+		    		 *bs_max=read_num;
+		    	 else if(read_num<*bs_min)
+		    		 *bs_min=read_num;
 		    	 }
 		    	 //make son finish:
 		    	 rand_num=-1;
 		    	 write(pipe_dad_to_bs[1],&rand_num,sizeof(int));
 		    	 //print details & close pipes"
-		    	 bs_avg=bs_sum/1000;
+		    	 *bs_avg=bs_sum/1000;
 }
