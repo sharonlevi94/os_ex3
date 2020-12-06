@@ -21,7 +21,7 @@ void dad_with_bs(int pipe_dad_to_bs[],int pipe_bs_to_dad[],int random_arr[],int*
 //-------------------------------------------------------------------------
 int main()
 {
-	srand(17);
+srand(17);
     int random_arr [ARR_LEN];
     int i,rand_num,rs_min,rs_max,rs_avg,bs_min,bs_max,bs_avg;
 //1) raffle numbers & sort:
