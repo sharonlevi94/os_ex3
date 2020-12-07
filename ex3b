@@ -1,0 +1,162 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <time.h>
+//-------------------------------------------------------------------------
+#define ARR_LEN 50000
+#define RAND_RANGE 200000
+int yes=1,no=0;
+int counter=0,count_deleted=0,count_dad_got=0;
+pid_t status;
+//-------------------------------------------------------------------------
+void terminate();
+void catch_sigterm();
+int find_location(int arr[],int num);
+void delete_number(int* arr , int location);
+void do_son(int pipe_sons_to_dad[],int pipe_dad_to_son[]);
+void do_dad (int* random_arr,int pipe_son_to_dad[],int pipe_dad_to_son[]);
+//-------------------------------------------------------------------------
+int main()
+{
+	srand(17);
+	signal(SIGTERM,catch_sigterm);
+    int random_arr [ARR_LEN];
+    int i,rand_num;
+    time_t time_before,time_after,time_dad;
+
+//1) raffle numbers:
+       for(i=0;i<ARR_LEN ; i++){
+        rand_num=rand()%RAND_RANGE;
+        random_arr[i]=rand_num;
+    }
+
+//2) create pipes for each sons:
+    int pipe_dad_to_son1[2]; //create a pipe for dad to rs_son
+    	if(pipe(pipe_dad_to_son1)==-1)
+         terminate();
+    int pipe_dad_to_son2[2]; //create a pipe for dad to rs_son
+    	if(pipe(pipe_dad_to_son2)==-1)
+              terminate();
+    int pipe_dad_to_son3[2]; //create a pipe for dad to rs_son
+        if(pipe(pipe_dad_to_son3)==-1)
+              terminate();
+    int pipe_son1_to_dad[2]; //create a pipe for son1 to dad
+        if(pipe(pipe_son1_to_dad)==-1)
+              terminate();
+    int pipe_son2_to_dad[2]; //create a pipe for son2 to dad
+         if(pipe(pipe_son2_to_dad)==-1)
+              terminate();
+    int pipe_son3_to_dad[2]; //create a pipe for son3 to dad
+         if(pipe(pipe_son3_to_dad)==-1)
+              terminate();
+
+//3)
+   for(i=0;i<3;i++){
+     status=fork();
+     if(status<0)
+     terminate();
+
+     if(status>0) {
+    	time_before=time(NULL);
+    	switch(i){
+    		case 0: {
+    			do_dad(random_arr,pipe_son1_to_dad,pipe_dad_to_son1);
+    			break;
+    		}
+    		case 1:{
+    			do_dad(random_arr,pipe_son2_to_dad,pipe_dad_to_son2);
+    			break;
+    		}
+    		case 2:{
+    			do_dad(random_arr,pipe_son3_to_dad,pipe_dad_to_son3);
+    			break;
+    		}
+    	}
+
+	 }
+     if(status==0) {
+    	 switch (i) {
+    	 case 0: {do_son(pipe_son1_to_dad,pipe_dad_to_son1);
+    	 break;}
+    	 case 1:{ do_son(pipe_son2_to_dad,pipe_dad_to_son2);
+    	 break;}
+    	 case 2:{ do_son(pipe_son3_to_dad,pipe_dad_to_son3);
+    	 break;}
+    	 default: break;
+    	 }
+     }
+   }
+
+   time_after=time(NULL);
+   time_dad=time_after-time_before;
+   printf("%d %d %d\n",(int)time_dad,count_dad_got,ARR_LEN);
+   return EXIT_SUCCESS;
+}
+//=========================================================================
+//this function terminate the program if there is an error in fork
+void terminate(){
+    perror ("error in fork()/pipe");
+    exit(EXIT_FAILURE);
+}
+//-------------------------------------------------------------------------
+void catch_sigterm(){
+	printf("%d %d\n",counter,count_deleted);
+	exit (EXIT_SUCCESS);
+}
+//-------------------------------------------------------------------------
+int find_location(int arr[],int num){
+	int i;
+	for(i=0; i<ARR_LEN ; i++){
+		if(arr[i]==num)
+			return i;
+	}
+	return 0;
+}
+//-------------------------------------------------------------------------
+void delete_number(int* arr, int location){
+
+	arr[location]=-1;
+}
+//-------------------------------------------------------------------------
+void do_son(int pipe_sons_to_dad[],int pipe_dad_to_son[]) {
+	int rand_num,son_id,nbytes_son,read_num_son;
+	count_deleted=0;
+	counter=0;
+	close(pipe_dad_to_son[1]);
+    close(pipe_sons_to_dad[0]);
+	     while(1){
+	    	 rand_num=rand()%RAND_RANGE;
+	    	 write(pipe_sons_to_dad[1],&rand_num,sizeof(int)); //send random number to dad via pipe
+	    	 counter++;
+	    	 son_id=(int)getpid();
+	    	 write(pipe_sons_to_dad[1],&son_id,sizeof(int)); //send to dad also his ID
+	    	 nbytes_son=read(pipe_dad_to_son[0],&read_num_son,sizeof(int));
+	    	 if(read_num_son)
+	    		 count_deleted++;
+	     }
+}
+//-------------------------------------------------------------------------
+void do_dad (int* random_arr,int pipe_son_to_dad[],int pipe_dad_to_son[]){
+	int nums_in_arr,nbytes_dad,location,read_num_dad,son_id;
+	nums_in_arr=ARR_LEN;
+	close(pipe_dad_to_son[0]);
+	 close(pipe_son_to_dad[1]);
+
+	 while(nums_in_arr>0){
+	    		 nbytes_dad=read(pipe_son_to_dad[0],&read_num_dad,sizeof(int));
+	    		 count_dad_got++;
+	    		 nbytes_dad=read(pipe_son_to_dad[0],&son_id,sizeof(int));
+	    		 location=find_location(random_arr,read_num_dad);
+	    		 if(location>-1){
+	    			 delete_number(random_arr,location); //delete the number if its exist in the array
+	    			 nums_in_arr--;
+	    			 write(pipe_dad_to_son[1],&yes,sizeof(int));
+	    		 }
+	    		 else
+	    			 write(pipe_dad_to_son[1],&no,sizeof(int));
+	    	 }
+	 kill(son_id,SIGTERM);
+}
+
